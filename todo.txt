@@ -1,0 +1,6 @@
+1. get modified source files -> A
+2. get modified header files -> H
+3. get all files that include H -> B
+4. collect A + B -> T
+5. compile T files to objects
+6. link objects
