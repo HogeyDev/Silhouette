@@ -1,21 +1,23 @@
 use std::process::Command;
 
+use crate::file::source_to_object;
+
 pub fn compile_source_file(include_dir: &str, build_dir: &str, path: &str) -> Option<()> {
     let name: String = path.to_owned();
-    let name: &str = &name.split("/").last().unwrap().split(".").collect::<Vec<_>>().iter().rev().skip(1).map(|x| *x).rev().collect::<Vec<_>>().join(".");
-    eprintln!("{path}\n{name}");
-    eprintln!("{include_dir}");
-    eprintln!("{build_dir}/{name}.o");
-    let output = Command::new("gcc")
+    let name: &str = &source_to_object(&name);
+    let gcc_output = Command::new("gcc")
         .args([
             "-c",
             "-o",
-            &format!("{build_dir}/{name}.o"),
+            &format!("{build_dir}/{name}"),
             "-I",
             include_dir,
             path
-        ]).output();
-    eprintln!("{output:#?}");
+        ]).output().unwrap();
+    if gcc_output.status.code() != Some(0) {
+        eprintln!("{}", gcc_output.stderr.iter().map(|x| *x as char).collect::<String>());
+    }
+    // eprintln!("{_output:#?}");
 
     Some(())
 }

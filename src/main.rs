@@ -1,37 +1,57 @@
-use std::process::Command;
+use std::{path::Path, process::Command};
 
+use config::Config;
 use dep::{get_dependent_sources, get_modified};
-use file::{get_hashes, read_file, read_silcache, CodebaseHashes};
+use file::{get_hashes, read_file, read_silcache, source_to_object, write_silcache, CodebaseHashes};
 use compilation::compile_source_file;
+use walkdir::WalkDir;
 
 pub mod header_locater;
 pub mod compilation;
+pub mod config;
 pub mod lexer;
 pub mod file;
 pub mod dep;
 
-static BUILD_DIR: &'static str = "../Shaders/build";
-static SOURCE_DIR: &'static str = "../Shaders/src";
-
 fn main() {
-    let silconfig: String = read_file(".silhouette/silconfig");
+    let silconfig: Config = Config::from(read_file(".silhouette/silconfig"));
     let old_hashes: CodebaseHashes = read_silcache(".silhouette/silcache").unwrap();
-    let new_hashes: CodebaseHashes = get_hashes(SOURCE_DIR);
+    let new_hashes: CodebaseHashes = get_hashes(&silconfig.source);
 
     let mod_source: Vec<String> = get_modified(&old_hashes.0, &new_hashes.0);
     let mod_header: Vec<String> = get_modified(&old_hashes.1, &new_hashes.1);
-    let dependent_sources: Vec<String> = get_dependent_sources(&mod_source, &mod_header);
-    dependent_sources.iter().for_each(|source| _ = compile_source_file(&format!("{SOURCE_DIR}/include"), BUILD_DIR, source));
+    let mut dependent_sources: Vec<String> = get_dependent_sources(&mod_source, &mod_header);
+    for (source, _) in new_hashes.0.iter() {
+        if dependent_sources.contains(source) { continue; }
+        let obj: String = source_to_object(source);
+        if !Path::new(&format!("{}/{obj}", &silconfig.build)).exists() {
+            dependent_sources.push(source.to_string());
+        }
+    }
+    dependent_sources.iter().for_each(|source| _ = compile_source_file(&format!("{}/include", silconfig.source), &silconfig.build, source));
 
-    // gcc build/glad.o build/main.o -o build/main -lSDL2 -lm -lGL
+    write_silcache(".silhouette/silcache", &new_hashes);
+
+    let objects: Vec<String> = dependent_sources.iter().map(|x| {
+        let obj: String = source_to_object(x);
+        let canon = std::fs::canonicalize(format!("{}/{obj}", &silconfig.build)).unwrap();
+        canon.to_str().unwrap().to_string()
+    }).collect();
+    if objects.len() == 0 {
+        std::process::exit(0);
+    }
     let linker_output = Command::new("gcc")
         .args([
             "-o",
-            &format!("{BUILD_DIR}/main"),
-            &format!("{BUILD_DIR}/*.o"),
-            "-lSDL2",
-            "-lm",
-            "-lGL",
-        ]).output();
-    eprintln!("{linker_output:#?}");
+            &format!("{}/main", silconfig.build)
+        ])
+        .args(objects)
+        .args(silconfig.ccargs.split_whitespace())
+        .output().unwrap();
+    if linker_output.status.code() != Some(0) {
+        eprintln!("{}", linker_output.stderr.iter().map(|x| *x as char).collect::<String>());
+    }
+    // if let Ok(x) = linker_output {
+    //     eprintln!("{}", x);
+    // }
 }

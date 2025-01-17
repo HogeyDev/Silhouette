@@ -1,6 +1,6 @@
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
-use std::{collections::HashMap, fs::File, io::{BufReader, Read}};
+use std::{collections::HashMap, fs::File, hash::{DefaultHasher, Hash, Hasher}, io::{BufReader, Read}};
 
 pub fn read_file(path: &str) -> String {
     match std::fs::read_to_string(path) {
@@ -38,7 +38,11 @@ pub fn read_silcache(path: &str) -> Option<CodebaseHashes> {
     let mut header_hashes: FileHashes = HashMap::new();
 
     for line in contents.lines() {
-        let (path, hash): (&str, &str) = line.split_once(" ")?;
+        let split: Option<(&str, &str)> = line.split_once(" ");
+        if split == None {
+            continue;
+        }
+        let (path, hash): (&str, &str) = split.unwrap();
         match path.split(".").last() {
             Some("c") => _ = source_hashes.insert(path.to_owned(), hash.to_owned()),
             Some("h") => _ = header_hashes.insert(path.to_owned(), hash.to_owned()),
@@ -47,6 +51,21 @@ pub fn read_silcache(path: &str) -> Option<CodebaseHashes> {
     }
     
     Some((source_hashes, header_hashes))
+}
+
+pub fn write_silcache(path: &str, hashes: &CodebaseHashes) {
+    let mut files: Vec<(String, String)> = hashes.0.clone().into_iter().collect();
+    hashes.1.clone().into_iter().map(|x| (std::fs::canonicalize(x.0).unwrap().to_str().unwrap().to_string(), x.1)).for_each(|x| files.push(x));
+    let plaintext: String = files.into_iter().map(|(file, hash)| format!("{file} {hash}")).collect::<Vec<String>>().join("\n");
+    let _ = std::fs::write(path, plaintext);
+}
+
+pub fn source_to_object(path: &str) -> String {
+    let mut hasher: DefaultHasher = DefaultHasher::new();
+    let tag: String = path.to_string();
+    tag.hash(&mut hasher);
+    let tag: u32 = (hasher.finish() & 0xffffffff).try_into().unwrap();
+    format!("{}_{tag:x}.o", path.split("/").last().unwrap().split(".").collect::<Vec<_>>().iter().rev().skip(1).map(|x| *x).rev().collect::<Vec<_>>().join("."))
 }
 
 pub fn get_hashes(source: &str) -> CodebaseHashes { // (Source, Header)
@@ -69,7 +88,8 @@ pub fn get_hashes(source: &str) -> CodebaseHashes { // (Source, Header)
         .map(|x| x.path().to_str().unwrap())
         .filter(|x| x.split(".").last() == Some("h"))
     {
-        let path: &str = entry;
+        let canon: std::path::PathBuf = std::fs::canonicalize(entry).unwrap();
+        let path: &str = canon.to_str().unwrap();
         let hash: String = hash_file(path);
         header_hashes.insert(path.to_owned(), hash);
     }

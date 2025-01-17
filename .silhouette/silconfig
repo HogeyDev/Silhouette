@@ -1,0 +1,5 @@
+entrypoint main
+source ../Shaders/src
+include ../Shaders/src/include
+build ./build
+ccargs -lSDL2 -lm -lGL
