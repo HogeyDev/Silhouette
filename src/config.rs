@@ -5,6 +5,7 @@ pub struct Config {
     pub include: String,
     pub build: String,
     pub ccargs: String,
+    pub ldargs: String,
 }
 
 impl Config {
@@ -15,6 +16,7 @@ impl Config {
             include: Default::default(),
             build: Default::default(),
             ccargs: Default::default(),
+            ldargs: Default::default(),
         };
         for line in raw.lines() {
             if line.trim_start().chars().nth(0).unwrap() == ';' {
@@ -28,6 +30,7 @@ impl Config {
                 "include" => config.include = value,
                 "build" => config.build = value,
                 "ccargs" => config.ccargs = value,
+                "ldargs" => config.ldargs = value,
                 x => panic!("Unknown configuration attribute: `{x}`"),
             }
         }
