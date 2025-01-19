@@ -3,7 +3,7 @@ use regex::Regex;
 use crate::file::{read_file, FileHashes};
 
 pub fn get_file_dependencies(path: &str) -> Vec<String> {
-    let contents: &str = &read_file(path);
+    let contents: &str = &read_file(path).unwrap();
     let include_regex: Regex = Regex::new(r#"#include\s*["<](.*?)[">]"#).unwrap();
 
     include_regex

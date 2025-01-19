@@ -2,11 +2,12 @@ use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 use std::{collections::HashMap, fs::File, hash::{DefaultHasher, Hash, Hasher}, io::{BufReader, Read}};
 
-pub fn read_file(path: &str) -> String {
-    match std::fs::read_to_string(path) {
-        Ok(x) => x,
-        Err(_) => panic!("Could not read file because path \"{path}\" does not exist"),
+pub fn read_file(path: &str) -> std::io::Result<String> {
+    let val: std::io::Result<String> = std::fs::read_to_string(path);
+    if let Err(ref e) = val {
+        eprintln!("Could not open path \"{path}\" for reason:\n{e}");
     }
+    val
 }
 
 pub fn hash_file(path: &str) -> String {
@@ -32,8 +33,18 @@ pub fn hash_file(path: &str) -> String {
 pub type FileHashes = HashMap<String, String>;
 pub type CodebaseHashes = (FileHashes, FileHashes);
 
+pub fn get_empty_codebase() -> CodebaseHashes {
+    (HashMap::new(), HashMap::new())
+}
+
 pub fn read_silcache(path: &str) -> Option<CodebaseHashes> {
-    let contents: String = read_file(path);
+    let contents: String = match read_file(path) {
+        Ok(x) => x,
+        Err(_) => {
+            write_silcache(path, &get_empty_codebase());
+            read_file(path).unwrap()
+        }
+    };
     let mut source_hashes: FileHashes = HashMap::new();
     let mut header_hashes: FileHashes = HashMap::new();
 
