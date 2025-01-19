@@ -1,4 +1,4 @@
-use std::{path::Path, process::Command};
+use std::{collections::HashSet, path::Path, process::Command};
 use config::Config;
 use dep::{get_dependent_sources, get_modified};
 use file::{get_empty_codebase, get_hashes, read_file, read_silcache, source_to_object, write_silcache, CodebaseHashes};
@@ -14,12 +14,14 @@ pub mod dep;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    if args.contains(&"fresh".to_owned()) {
+    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap());
+    if args.contains(&"fresh".to_owned())
+        || !std::path::Path::new(".silhouette/silcache").exists()
+        || !std::path::Path::new(&format!("{}/main", &silconfig.build)).exists() {
         let empty_hashes: CodebaseHashes = get_empty_codebase();
         write_silcache(".silhouette/silcache", &empty_hashes);
     }
 
-    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap());
     let old_hashes: CodebaseHashes = read_silcache(".silhouette/silcache").unwrap();
     let new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
     if args.contains(&"debug".to_owned()) {
@@ -60,6 +62,7 @@ fn main() {
     if args.contains(&"debug".to_owned()) {
         eprintln!("MODIFIED SOURCES:\n{mod_source:#?}\nMODIFIED HEADERS:\n{mod_header:#?}\nDEPENDENT SOURCES:\n{dependent_sources:#?}");
     }
+    dependent_sources = dependent_sources.drain(..).collect::<HashSet<_>>().into_iter().collect();
     dependent_sources.iter().for_each(|source| _ = compile_source_file(&silconfig.compiler, &silconfig.ccargs, &format!("{}", &silconfig.include), &silconfig.build, source));
 
     write_silcache(".silhouette/silcache", &new_hashes);
