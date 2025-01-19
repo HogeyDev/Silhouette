@@ -21,7 +21,7 @@ fn main() {
 
     let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap());
     let old_hashes: CodebaseHashes = read_silcache(".silhouette/silcache").unwrap();
-    let new_hashes: CodebaseHashes = get_hashes(&silconfig.source);
+    let new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
     if args.contains(&"debug".to_owned()) {
         eprintln!("OLD HASHES:\n{old_hashes:#?}\nNEW HASHES:\n{new_hashes:#?}");
     }
@@ -30,7 +30,7 @@ fn main() {
 
         for (source, _) in new_hashes.0.iter() {
             let output_file: String = format!("{}/{}", &silconfig.build, source_to_object(source));
-            let command: String = format!("gcc -o {output_file} -c {source} -I {} {} {}", &silconfig.include, &silconfig.ccargs, &silconfig.ldargs);
+            let command: String = format!("{} -o {output_file} -c {source} -I {} {} {}", &silconfig.compiler, &silconfig.include, &silconfig.ccargs, &silconfig.ldargs);
 
             compile_commands.push(json!({
                 "directory": std::env::current_dir().unwrap().to_str().unwrap(),
@@ -60,7 +60,7 @@ fn main() {
     if args.contains(&"debug".to_owned()) {
         eprintln!("MODIFIED SOURCES:\n{mod_source:#?}\nMODIFIED HEADERS:\n{mod_header:#?}\nDEPENDENT SOURCES:\n{dependent_sources:#?}");
     }
-    dependent_sources.iter().for_each(|source| _ = compile_source_file(&silconfig.ccargs, &format!("{}/include", silconfig.source), &silconfig.build, source));
+    dependent_sources.iter().for_each(|source| _ = compile_source_file(&silconfig.compiler, &silconfig.ccargs, &format!("{}", &silconfig.include), &silconfig.build, source));
 
     write_silcache(".silhouette/silcache", &new_hashes);
 
@@ -72,11 +72,11 @@ fn main() {
     if objects.len() == 0 {
         std::process::exit(0);
     }
-    println!("gcc -o {}/main {} {}", &silconfig.build, objects.join(" "), &silconfig.ldargs);
-    let linker_output = Command::new("gcc")
+    println!("{} -o {}/main {} {}", &silconfig.compiler, &silconfig.build, objects.join(" "), &silconfig.ldargs);
+    let linker_output = Command::new(&silconfig.compiler)
         .args([
             "-o",
-            &format!("{}/main", silconfig.build)
+            &format!("{}/main", &silconfig.build)
         ])
         .args(objects)
         .args(silconfig.ldargs.split_whitespace())

@@ -6,17 +6,23 @@ pub struct Config {
     pub build: String,
     pub ccargs: String,
     pub ldargs: String,
+    pub compiler: String,
+    pub source_ext: String,
+    pub header_ext: String,
 }
 
 impl Config {
     pub fn from(raw: String) -> Self {
         let mut config: Self = Self {
-            entrypoint: Default::default(),
-            source: Default::default(),
-            include: Default::default(),
-            build: Default::default(),
-            ccargs: Default::default(),
-            ldargs: Default::default(),
+            entrypoint: "main".to_owned(),
+            source: "./src/".to_owned(),
+            include: "./src/include/".to_owned(),
+            build: "./build/".to_owned(),
+            ccargs: "".to_owned(),
+            ldargs: "".to_owned(),
+            compiler: "gcc".to_owned(),
+            source_ext: "c".to_owned(),
+            header_ext: "h".to_owned(),
         };
         for line in raw.lines() {
             if line.trim_start().chars().nth(0).unwrap() == ';' {
@@ -31,6 +37,9 @@ impl Config {
                 "build" => config.build = value,
                 "ccargs" => config.ccargs = value,
                 "ldargs" => config.ldargs = value,
+                "compiler" => config.compiler = value,
+                "source_ext" => config.source_ext = value,
+                "header_ext" => config.header_ext = value,
                 x => panic!("Unknown configuration attribute: `{x}`"),
             }
         }

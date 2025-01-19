@@ -79,7 +79,7 @@ pub fn source_to_object(path: &str) -> String {
     format!("{}_{tag:x}.o", path.split("/").last().unwrap().split(".").collect::<Vec<_>>().iter().rev().skip(1).map(|x| *x).rev().collect::<Vec<_>>().join("."))
 }
 
-pub fn get_hashes(source: &str) -> CodebaseHashes { // (Source, Header)
+pub fn get_hashes(source_ext: &str, header_ext: &str, source: &str) -> CodebaseHashes { // (Source, Header)
     let mut source_hashes: FileHashes = HashMap::new();
     let mut header_hashes: FileHashes = HashMap::new();
 
@@ -88,7 +88,7 @@ pub fn get_hashes(source: &str) -> CodebaseHashes { // (Source, Header)
         .filter(|x| x.file_type().is_file())
         .collect();
     for entry in entries.iter()
-        .filter(|x| x.path().to_str().unwrap().split(".").last() == Some("c"))
+        .filter(|x| x.path().to_str().unwrap().split(".").last() == Some(source_ext))
     {
         let rel_path: std::path::PathBuf = std::fs::canonicalize(entry.path().to_str().unwrap()).unwrap();
         let path: &str = rel_path.to_str().unwrap();
@@ -97,7 +97,7 @@ pub fn get_hashes(source: &str) -> CodebaseHashes { // (Source, Header)
     }
     for entry in entries.iter()
         .map(|x| x.path().to_str().unwrap())
-        .filter(|x| x.split(".").last() == Some("h"))
+        .filter(|x| x.split(".").last() == Some(header_ext))
     {
         let canon: std::path::PathBuf = std::fs::canonicalize(entry).unwrap();
         let path: &str = canon.to_str().unwrap();
