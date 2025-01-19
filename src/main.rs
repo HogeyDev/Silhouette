@@ -52,7 +52,7 @@ fn main() {
     let mod_header: Vec<String> = get_modified(&old_hashes.1, &new_hashes.1);
     let mut dependent_sources: Vec<String> = mod_source.clone();
     get_dependent_sources(&all_sources, &mod_header).iter().for_each(|x| dependent_sources.push(x.to_owned()));
-    for source in all_sources {
+    for source in &all_sources {
         if dependent_sources.contains(&source) { continue; }
         let obj: String = source_to_object(&source);
         if !Path::new(&format!("{}/{obj}", &silconfig.build)).exists() {
@@ -67,12 +67,12 @@ fn main() {
 
     write_silcache(".silhouette/silcache", &new_hashes);
 
-    let objects: Vec<String> = dependent_sources.iter().map(|x| {
+    let objects: Vec<String> = all_sources.iter().map(|x| {
         let obj: String = source_to_object(x);
         let canon = std::fs::canonicalize(format!("{}/{obj}", &silconfig.build)).unwrap();
         canon.to_str().unwrap().to_string()
     }).collect();
-    if objects.len() == 0 {
+    if dependent_sources.len() == 0 {
         std::process::exit(0);
     }
     println!("{} -o {}/main {} {}", &silconfig.compiler, &silconfig.build, objects.join(" "), &silconfig.ldargs);
