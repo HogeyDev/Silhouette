@@ -46,6 +46,32 @@ fn main() {
         serde_json::to_writer(file, &compile_commands).unwrap();
         std::process::exit(0);
     }
+    if args.contains(&"help".to_owned()) {
+        println!("usage: `sil [command]`\n\trunning `sil` with no commands will run the compilation process");
+
+        println!("commands:");
+        println!("\t`fresh`\n\trecompiles everything from scratch\n\tuseful when a file may have changed and silhouette isnt picking up on it\n");
+        println!("\t`cc`\n\tgenerates compile_commands.json\n\tused to pass compilation args into lsp for accurate error messages\n");
+        println!("\t`debug`\n\toutputs debug information significant to each stage\n");
+
+        println!("configuration:");
+        println!("\tconfiguration of silhouette is done in `.silhouette/silconfig`");
+        println!("\tsetting the value of an attribute is done as following:\n\t\t`attribute value`");
+        println!("\texample:\n\t\t`source ./my_source`\n");
+
+        println!("\tlist of attributes:");
+        println!("\t\t`entrypoint`\n\t\tdefines the entrypoint function for the c compiler to look for\n\t\tdefault: `main`\n");
+        println!("\t\t`source`\n\t\tdefines the directory where silhouette searches for source files\n\t\tdefault: `./src/`\n");
+        println!("\t\t`include`\n\t\tdefines the directory where silhouette searches for header files\n\t\tdefault: `./src/include/`\n");
+        println!("\t\t`build`\n\t\tdefines the directory where silhouette places build files\n\t\tdefault: `./build/`\n");
+        println!("\t\t`ccargs`\n\t\tlists the arguments to be passed to the c compiler\n\t\tdefault: ``\n");
+        println!("\t\t`ldargs`\n\t\tlists the arguments to be passed to the linker\n\t\tdefault: ``\n");
+        println!("\t\t`compiler`\n\t\tdefines the executable name of the compiler to be used\n\t\tdefault: `gcc`\n");
+        println!("\t\t`source_ext`\n\t\tdefines the file extension for a source file (usually c/cpp/cc)\n\t\tdefault: `c`\n");
+        println!("\t\t`header_ext`\n\t\tdefines the file extension for a header file (usually h/hpp/hh)\n\t\tdefault: `h`\n");
+
+        std::process::exit(0);
+    }
 
     let all_sources: Vec<String> = new_hashes.0.iter().map(|(source, _)| source.to_string()).collect();
     let mod_source: Vec<String> = get_modified(&old_hashes.0, &new_hashes.0);
