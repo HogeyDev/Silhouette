@@ -47,9 +47,10 @@ fn main() {
         std::process::exit(0);
     }
     if args.contains(&"help".to_owned()) {
-        println!("usage: `sil [command]`\n\trunning `sil` with no commands will run the compilation process");
+        println!("usage: `sil [command]`\n\trunning `sil` with no commands will run the compilation process\n");
 
         println!("commands:");
+        println!("\t`help`\n\tprint this menu\n");
         println!("\t`fresh`\n\trecompiles everything from scratch\n\tuseful when a file may have changed and silhouette isnt picking up on it\n");
         println!("\t`cc`\n\tgenerates compile_commands.json\n\tused to pass compilation args into lsp for accurate error messages\n");
         println!("\t`debug`\n\toutputs debug information significant to each stage\n");
