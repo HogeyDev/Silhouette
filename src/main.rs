@@ -23,7 +23,7 @@ fn main() {
     }
 
     let old_hashes: CodebaseHashes = read_silcache(".silhouette/silcache").unwrap();
-    let new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
+    let mut new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
     if args.contains(&"debug".to_owned()) {
         eprintln!("OLD HASHES:\n{old_hashes:#?}\nNEW HASHES:\n{new_hashes:#?}");
     }
@@ -90,7 +90,11 @@ fn main() {
         eprintln!("MODIFIED SOURCES:\n{mod_source:#?}\nMODIFIED HEADERS:\n{mod_header:#?}\nDEPENDENT SOURCES:\n{dependent_sources:#?}");
     }
     dependent_sources = dependent_sources.drain(..).collect::<HashSet<_>>().into_iter().collect();
-    dependent_sources.iter().for_each(|source| _ = compile_source_file(&silconfig.compiler, &silconfig.ccargs, &format!("{}", &silconfig.include), &silconfig.build, source));
+    if dependent_sources.iter().map(|source| compile_source_file(
+            &silconfig.compiler,
+            &silconfig.ccargs,
+            &format!("{}", &silconfig.include),
+            &silconfig.build, source)).any(|x| x == None) { new_hashes = get_empty_codebase(); }
 
     write_silcache(".silhouette/silcache", &new_hashes);
 

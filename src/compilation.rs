@@ -8,6 +8,7 @@ pub fn compile_source_file(compiler: &str, ccargs: &str, include_dir: &str, buil
     println!("{compiler} -c -o {build_dir}/{name} -I {include_dir} {ccargs} {path}");
     let compiler_output = Command::new(compiler)
         .args([
+            "-fdiagnostics-color=always",
             "-c",
             "-o",
             &format!("{build_dir}/{name}"),
@@ -19,7 +20,8 @@ pub fn compile_source_file(compiler: &str, ccargs: &str, include_dir: &str, buil
             path
         ]).output().unwrap();
     if compiler_output.status.code() != Some(0) {
-        eprintln!("{}", compiler_output.stderr.iter().map(|x| *x as char).collect::<String>());
+        eprintln!("{}", String::from_utf8_lossy(&compiler_output.stderr));
+        return None;
     }
 
     Some(())
