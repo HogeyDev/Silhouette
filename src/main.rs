@@ -14,7 +14,10 @@ pub mod dep;
 fn main() {
     let args: Vec<String> = std::env::args().collect();
 
-    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap());
+    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap_or_else(|_| {
+            eprintln!("could not find file at `.silhouette/silconfig`.\nplease at least create an empty file there.");
+            std::process::exit(1);
+    }));
     if args.contains(&"fresh".to_owned())
         || !std::path::Path::new(".silhouette/silcache").exists()
         || !std::path::Path::new(&format!("{}/main", &silconfig.build)).exists() {
