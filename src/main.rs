@@ -13,42 +13,6 @@ pub mod dep;
 
 fn main() {
     let args: Vec<String> = std::env::args().collect();
-
-    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap_or_else(|_| {
-            eprintln!("could not find file at `.silhouette/silconfig`.\nplease at least create an empty file there.");
-            std::process::exit(1);
-    }));
-    if args.contains(&"fresh".to_owned())
-        || !std::path::Path::new(".silhouette/silcache").exists()
-        || !std::path::Path::new(&format!("{}/main", &silconfig.build)).exists() {
-        let empty_hashes: CodebaseHashes = get_empty_codebase();
-        write_silcache(".silhouette/silcache", &empty_hashes);
-    }
-
-    let old_hashes: CodebaseHashes = read_silcache(".silhouette/silcache").unwrap();
-    let mut new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
-    if args.contains(&"debug".to_owned()) {
-        eprintln!("OLD HASHES:\n{old_hashes:#?}\nNEW HASHES:\n{new_hashes:#?}");
-    }
-    if args.contains(&"cc".to_owned()) {
-        let mut compile_commands: Vec<serde_json::Value> = Vec::new();
-
-        for (source, _) in new_hashes.0.iter() {
-            let output_file: String = format!("{}/{}", &silconfig.build, source_to_object(source));
-            let command: String = format!("{} -o {output_file} -c {source} -I {} {} {}", &silconfig.compiler, &silconfig.include, &silconfig.ccargs, &silconfig.ldargs);
-
-            compile_commands.push(json!({
-                "directory": std::env::current_dir().unwrap().to_str().unwrap(),
-                "command": command,
-                "file": source,
-                "output": output_file,
-            }));
-        }
-
-        let file: std::fs::File = std::fs::File::create("compile_commands.json").unwrap();
-        serde_json::to_writer(file, &compile_commands).unwrap();
-        std::process::exit(0);
-    }
     if args.contains(&"help".to_owned()) {
         println!("usage: `sil [command]`\n\trunning `sil` with no commands will run the compilation process\n");
 
@@ -74,6 +38,42 @@ fn main() {
         println!("\t\t`source_ext`\n\t\tdefines the file extension for a source file (usually c/cpp/cc)\n\t\tdefault: `c`\n");
         println!("\t\t`header_ext`\n\t\tdefines the file extension for a header file (usually h/hpp/hh)\n\t\tdefault: `h`\n");
 
+        std::process::exit(0);
+    }
+
+    let silconfig: Config = Config::from(read_file(".silhouette/silconfig").unwrap_or_else(|_| {
+            eprintln!("could not find file at `.silhouette/silconfig`.\nplease at least create an empty file there.");
+            std::process::exit(1);
+    }));
+    if args.contains(&"fresh".to_owned())
+        || !std::path::Path::new(".silhouette/silcache").exists()
+        || !std::path::Path::new(&format!("{}/main", &silconfig.build)).exists() {
+        let empty_hashes: CodebaseHashes = get_empty_codebase();
+        write_silcache(".silhouette/silcache", &empty_hashes);
+    }
+
+    let old_hashes: CodebaseHashes = read_silcache(&silconfig, ".silhouette/silcache").unwrap();
+    let mut new_hashes: CodebaseHashes = get_hashes(&silconfig.source_ext, &silconfig.header_ext, &silconfig.source);
+    if args.contains(&"debug".to_owned()) {
+        eprintln!("OLD HASHES:\n{old_hashes:#?}\nNEW HASHES:\n{new_hashes:#?}");
+    }
+    if args.contains(&"cc".to_owned()) {
+        let mut compile_commands: Vec<serde_json::Value> = Vec::new();
+
+        for (source, _) in new_hashes.0.iter() {
+            let output_file: String = format!("{}/{}", &silconfig.build, source_to_object(source));
+            let command: String = format!("{} -o {output_file} -c {source} -I {} {} {}", &silconfig.compiler, &silconfig.include, &silconfig.ccargs, &silconfig.ldargs);
+
+            compile_commands.push(json!({
+                "directory": std::env::current_dir().unwrap().to_str().unwrap(),
+                "command": command,
+                "file": source,
+                "output": output_file,
+            }));
+        }
+
+        let file: std::fs::File = std::fs::File::create("compile_commands.json").unwrap();
+        serde_json::to_writer(file, &compile_commands).unwrap();
         std::process::exit(0);
     }
 

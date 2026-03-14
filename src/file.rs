@@ -2,6 +2,8 @@ use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 use std::{collections::HashMap, fs::File, hash::{DefaultHasher, Hash, Hasher}, io::{BufReader, Read}};
 
+use crate::config::Config;
+
 pub fn read_file(path: &str) -> std::io::Result<String> {
     let val: std::io::Result<String> = std::fs::read_to_string(path);
     if let Err(ref e) = val {
@@ -37,7 +39,7 @@ pub fn get_empty_codebase() -> CodebaseHashes {
     (HashMap::new(), HashMap::new())
 }
 
-pub fn read_silcache(path: &str) -> Option<CodebaseHashes> {
+pub fn read_silcache(config: &Config, path: &str) -> Option<CodebaseHashes> {
     let contents: String = match read_file(path) {
         Ok(x) => x,
         Err(_) => {
@@ -55,8 +57,8 @@ pub fn read_silcache(path: &str) -> Option<CodebaseHashes> {
         }
         let (path, hash): (&str, &str) = split.unwrap();
         match path.split(".").last() {
-            Some("c") => _ = source_hashes.insert(path.to_owned(), hash.to_owned()),
-            Some("h") => _ = header_hashes.insert(path.to_owned(), hash.to_owned()),
+            Some(source) if source == config.source_ext => _ = source_hashes.insert(path.to_owned(), hash.to_owned()),
+            Some(header) if header == config.header_ext => _ = header_hashes.insert(path.to_owned(), hash.to_owned()),
             _ => eprintln!("{path} is neither a C nor a Header file. skipping..."),
         };
     }
